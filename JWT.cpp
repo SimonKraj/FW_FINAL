@@ -211,7 +211,7 @@ int Encrypt_SHA256(const char *input_string,char *output_hash, char *output_hash
   Serial.print(sha_len);  
   Serial.print("\nSHA256 RET -> ");
   Serial.print(hash_ret);
-   Serial.print("\nSHA256 START -> ");
+  Serial.print("\nSHA256 START -> ");
   Serial.print(start_ret);
   Serial.print("\nSHA256 UPDATE -> ");
   Serial.print(update_ret);
