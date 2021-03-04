@@ -114,7 +114,7 @@ while(1)
     
     //uint8_t claim = (uint8_t*)malloc(25 + strlen((const char*)("{\"sub\":\"%s\",\"iat\":%d,\"exp\":%d}")) + strlen((const char*)serial_num) + strlen((const char*)time_iat) + strlen((const char*)time_exp));  //generate claim     
     char claim[200];
-    sprintf(claim,"{\"sub\":\"%s\",\"iat\":%lu,\"exp\":%lu}",(char*)serial_num,(char*)time_iat,(char*)time_exp);
+    sprintf(claim,"{\"sub\":\"%s\",\"iat\":%ld,\"exp\":%ld}",(char*)serial_num,(char*)time_iat,(char*)time_exp);
 
     uint8_t *vysledok_claim = JWT_base_64_url((uint8_t*)claim); 
     //uint8_t base64_header_claim = (uint8_t*)malloc(1 + strlen((const char*)".") + strlen((const char*)vysledok_claim) + strlen((const char*)vysledok_header));     ///////////header+claim -> JWT Content    
@@ -167,7 +167,7 @@ while(1)
    Serial.println((char*)bearer_token);
    /*
    http.addHeader("Content-Type","application/json");
-   http.addHeader("Authorization",(char*)bearer_token);                                                                             //Authorization set
+   http.addHeader("Authorization",(char*)bearer_token);                                                                             
    int ret = http.POST((char*)payload);
    Serial.print("\n HTTP Code ");                                          
    Serial.print(ret);
@@ -209,8 +209,10 @@ int ECDSA_signature_det(const char *private_key, uint8_t* input_buffer, uint8_t*
     int verify = mbedtls_ecdsa_sign_det(&ecdsa_ctx.grp, &r, &s, &ecdsa_ctx.d, input_buffer, sizeof(input_buffer), MBEDTLS_MD_SHA256); 
     Serial.print("\nECDSA VERIFY-> ");
     Serial.print(verify);
-    int buffer_1 = mbedtls_mpi_write_binary(&r, output_buffer, mbedtls_mpi_size(&r)); 
-    int buffer_2 = mbedtls_mpi_write_binary(&s, output_buffer + mbedtls_mpi_size(&s), mbedtls_mpi_size(&s));
+    //int buffer_1 = mbedtls_mpi_write_binary(&r, output_buffer, mbedtls_mpi_size(&r)); 
+    //int buffer_2 = mbedtls_mpi_write_binary(&s, output_buffer + mbedtls_mpi_size(&s), mbedtls_mpi_size(&s));
+    int buffer_1 = mbedtls_mpi_write_binary(&r, output_buffer, 32); 
+    int buffer_2 = mbedtls_mpi_write_binary(&s, output_buffer + 32, 32);
 
     Serial.print("\nECDSA CONT-> ");
     Serial.print(pk_cont);
@@ -253,9 +255,10 @@ uint8_t *JWT_base_64_url(uint8_t* base_str)
 {
   int olen =0;
   String out = base64::encode(base_str,strlen((const char*)base_str));
-  //String out = base64::encode(base_str,sizeof(base_str));
+ // String out = base64::encode(base_str,sizeof(base_str));
  // uint8_t *result = (uint8_t*)malloc(sizeof(out)+1);
   uint8_t *result = (uint8_t*)malloc(strlen((const char*)out.c_str())+1);
+ //uint8_t result[100];
   strcpy((char*)result,out.c_str()); 
   for(int x =0 ; x<(strlen((const char*)result));x++)
    {
