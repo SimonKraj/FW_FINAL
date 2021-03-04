@@ -65,8 +65,8 @@ void setup(){
     LocalTime();
 
 while(1){
- // Send_to_server(       PRIVATE_KEY,             PUBLIC_KEY,       sec_to_expire,        serial_num,       server_name, payload);
-Send_to_server(PRIVATE_KEY,PUBLIC_KEY,sec_to_expire,serial_num,server_name, payload); 
+
+    Send_to_server(PRIVATE_KEY, PUBLIC_KEY,sec_to_expire,serial_num,server_name, payload); 
   delay(1000);
     ////////////////////////////////////////GENERATE JWT TOKEN/////////////////////////////////////////
    /* //Encrypt_SHA256(PUBLIC_KEY,&sha_pub_key[0],&sha_pub_key_hex[0]);               //generate kid (public key hash sha256 in hex)    // not in use yet
