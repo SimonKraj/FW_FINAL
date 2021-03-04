@@ -1,5 +1,5 @@
 #include <M5StickC.h>
-#include <WiFi.h>
+//#include <WiFi.h>
 #include <HTTPClient.h>
 #include "mbedtls/md.h"
 #include <AXP192.h> 
@@ -64,13 +64,14 @@ void setup(){
   
     time_t time_iat,time_exp;
     struct tm timeinfo;
-  
+    Serial.begin(115200);
+
   
     M5.begin();
     M5.Axp.ScreenBreath(0);
-    Serial.begin(115200);
+   
     Serial.println("Boot");
-
+/*
     //wifi connect
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
@@ -82,12 +83,12 @@ void setup(){
 
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
     LocalTime();
-
+*/
 while(1)
   {
 
-    HTTPClient http;
-    http.begin(server_name);
+  //  HTTPClient http;
+  //  http.begin(server_name);
     
     uint8_t hash_string[65]={0};
     char sha_pub_key[65]={0};
@@ -104,23 +105,26 @@ while(1)
     int sha_ret =0;
     size_t outlen;
     
-    uint8_t *header = (uint8_t*)malloc(1+(strlen("{\"alg\":\"ES256\",\"typ\":\"JWT\",\"kid\":}")+strlen((const char*)key_hex)));                  //generate header  
-    sprintf((char*)header,"{\"alg\":\"ES256\",\"typ\":\"JWT\",\"kid\":\"%s\"}",(char*)key_hex);
+    //uint8_t header = (uint8_t*)malloc(1 + (strlen("{\"alg\":\"ES256\",\"typ\":\"JWT\",\"kid\":}") + strlen((const char*)key_hex)));                  //generate header  
+    char header[150]; 
+    sprintf(header,"{\"alg\":\"ES256\",\"typ\":\"JWT\",\"kid\":\"%s\"}",(char*)key_hex);
     uint8_t *vysledok_header = JWT_base_64_url((uint8_t*)header);
     time(&time_iat);                                                                                                           //get fresh time for timestamp
     time_exp = time_iat + sec_to_expire;
     
-    uint8_t *claim = (uint8_t*)malloc(25+strlen((const char*)("{\"sub\":\"%s\",\"iat\":%d,\"exp\":%d}"))+strlen((const char*)serial_num)+strlen((const char*)time_iat)+strlen((const char*)time_exp));  //generate claim     
-    sprintf((char*)claim,"{\"sub\":\"%s\",\"iat\":%lu,\"exp\":%lu}",(char*)serial_num,(char*)time_iat,(char*)time_exp);
+    //uint8_t claim = (uint8_t*)malloc(25 + strlen((const char*)("{\"sub\":\"%s\",\"iat\":%d,\"exp\":%d}")) + strlen((const char*)serial_num) + strlen((const char*)time_iat) + strlen((const char*)time_exp));  //generate claim     
+    char claim[200];
+    sprintf(claim,"{\"sub\":\"%s\",\"iat\":%lu,\"exp\":%lu}",(char*)serial_num,(char*)time_iat,(char*)time_exp);
 
     uint8_t *vysledok_claim = JWT_base_64_url((uint8_t*)claim); 
-    uint8_t *base64_header_claim = (uint8_t*)malloc(1+strlen((const char*)".") + strlen((const char*)vysledok_claim) + strlen((const char*)vysledok_header));     ///////////header+claim -> JWT Content    
-    sprintf((char*)base64_header_claim, "%s.%s", (char*)vysledok_header, (char*)vysledok_claim);
-  
-   Serial.print("\nSHA256 INPUT-> ");
-   Serial.print((char*)base64_header_claim);
-   int len_input = sizeof(base64_header_claim);                                                        
-   int ret = mbedtls_sha256_ret((const unsigned char*)base64_header_claim, len_input, hash, 0);                        ////HASH SHA256
+    //uint8_t base64_header_claim = (uint8_t*)malloc(1 + strlen((const char*)".") + strlen((const char*)vysledok_claim) + strlen((const char*)vysledok_header));     ///////////header+claim -> JWT Content    
+    char base64_header_claim[300];
+    sprintf(base64_header_claim, "%s.%s", (char*)vysledok_header, (char*)vysledok_claim);
+    
+    Serial.print("\nSHA256 INPUT-> ");
+    Serial.print((char*)base64_header_claim);
+    int len_input = sizeof(base64_header_claim);                                                        
+    int ret = mbedtls_sha256_ret((uint8_t*)base64_header_claim, len_input, hash, 0);                        ////HASH SHA256
  /* 
   mbedtls_md_context_t ctx;
   mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256; 
@@ -140,29 +144,28 @@ while(1)
    int a = sizeof(hash);
    Serial.print(a);
     
-   Serial.print("\nHASH SHA256 RET->");     
-   Serial.print(ret);
+ //  Serial.print("\nHASH SHA256 RET->");     
+ // Serial.print(ret);
 
       
-   Serial.print("\nHASH SHA256 ->");      
-   Serial.print((char*)hash);
+ //  Serial.print("\nHASH SHA256 ->");      
+ //  Serial.print((char*)hash);
  
-
    ECDSA_signature_det(PRIVATE_KEY, hash, ecdsa_output_buffer);
-   Serial.print("\nECDSA OUT OUT-> ");
-   Serial.print((int)ecdsa_output_buffer,HEX);
-/*   uint8_t *sign = JWT_base_64_url(ecdsa_output_buffer);
+   uint8_t *sign = JWT_base_64_url(ecdsa_output_buffer);
 
-   uint8_t *JWT_token = (uint8_t*)malloc(1+strlen((const char*)base64_header_claim)+100);                                                     
+   //uint8_t *JWT_token = (uint8_t*)malloc(1+strlen((const char*)base64_header_claim)+100);                                                     
+   char JWT_token[250]; 
    //int sprintf_ret = sprintf(JWT_token, "%s.%s",base64_header_claim, base64_sign);
    sprintf((char*)JWT_token, "%s.%s", (char*)base64_header_claim, (char*)sign);
 
-   unsigned char *bearer_token = (uint8_t*)malloc(1+strlen((const char*)JWT_token)+strlen("Bearer ")); 
-   //sprintf((char*)bearer_token,"%s%s","Bearer ", (char*)JWT_token);
+   //unsigned char *bearer_token = (uint8_t*)malloc(1+strlen((const char*)JWT_token)+strlen("Bearer ")); 
+   char bearer_token[250];
+   sprintf(bearer_token,"%s%s","Bearer ", (char*)JWT_token);
    //Serial.print("\nBearer token -> ");
    Serial.print("\n");
    Serial.println((char*)bearer_token);
-  */ /*
+   /*
    http.addHeader("Content-Type","application/json");
    http.addHeader("Authorization",(char*)bearer_token);                                                                             //Authorization set
    int ret = http.POST((char*)payload);
@@ -190,24 +193,24 @@ void loop()
 
 
 
-int ECDSA_signature_det(const char *private_key, uint8_t* input_buffer, uint8_t* output_buffer) //output ti je na 2 veci u8_t ked mu feedujes string do inputu
+int ECDSA_signature_det(const char *private_key, uint8_t* input_buffer, uint8_t* output_buffer) 
   {
     mbedtls_ecdsa_context ecdsa_ctx; 
     mbedtls_pk_context pk_ctx;
     mbedtls_mpi r;
     mbedtls_mpi s;                       
-                                                          ///////////////Initialization    
+                                                  ///////////////Initialization    
     mbedtls_pk_init(&pk_ctx);
+    int pk_cont = mbedtls_pk_parse_key(&pk_ctx, (unsigned char*)private_key, strlen(private_key)+1, NULL, NULL);
     mbedtls_ecdsa_init(&ecdsa_ctx);
+    int keypair = mbedtls_ecdsa_from_keypair(&ecdsa_ctx, mbedtls_pk_ec(pk_ctx));
     mbedtls_mpi_init(&s);
     mbedtls_mpi_init(&r);
-    
-    int pk_cont = mbedtls_pk_parse_key(&pk_ctx, (unsigned char*)private_key, strlen((const char*)private_key)+1, NULL, NULL);
-    int keypair = mbedtls_ecdsa_from_keypair(&ecdsa_ctx, mbedtls_pk_ec(pk_ctx));
-    int verify = mbedtls_ecdsa_sign_det(&ecdsa_ctx.grp, &r,&s, &ecdsa_ctx.d, input_buffer, sizeof(input_buffer), MBEDTLS_MD_SHA256); 
+    int verify = mbedtls_ecdsa_sign_det(&ecdsa_ctx.grp, &r, &s, &ecdsa_ctx.d, input_buffer, sizeof(input_buffer), MBEDTLS_MD_SHA256); 
+    Serial.print("\nECDSA VERIFY-> ");
+    Serial.print(verify);
     int buffer_1 = mbedtls_mpi_write_binary(&r, output_buffer, mbedtls_mpi_size(&r)); 
     int buffer_2 = mbedtls_mpi_write_binary(&s, output_buffer + mbedtls_mpi_size(&s), mbedtls_mpi_size(&s));
-
 
     Serial.print("\nECDSA CONT-> ");
     Serial.print(pk_cont);
@@ -219,7 +222,6 @@ int ECDSA_signature_det(const char *private_key, uint8_t* input_buffer, uint8_t*
     Serial.print(buffer_1);
     Serial.print("\nECDSA BUF2-> ");
     Serial.print(buffer_2);
-   
     Serial.print("\nECDSA LEN OUT-> ");
     int a = sizeof(output_buffer);
     Serial.print(a);
@@ -232,11 +234,6 @@ int ECDSA_signature_det(const char *private_key, uint8_t* input_buffer, uint8_t*
     mbedtls_mpi_free(&s); 
    return 0; 
   }
-
-
-
-
-
 
 void LocalTime()
 {
@@ -251,11 +248,6 @@ void LocalTime()
   time_t timestamp;
   time(&timestamp);
 }
-
-
-
-
-
 
 uint8_t *JWT_base_64_url(uint8_t* base_str)   
 {
