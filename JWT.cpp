@@ -15,8 +15,6 @@
 
 const char b64chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-
-
 int Send_to_server(const char *private_key, const char *public_key, int sec_to_expire, const char *serial_num, char *end_point, char *payload_data) 
 {
   HTTPClient http;
@@ -82,8 +80,9 @@ int Send_to_server(const char *private_key, const char *public_key, int sec_to_e
     case '=' :  *(result+x) = NULL;
                 break; 
     default : break;
-  }
-  }
+    }//switch
+  }//for
+
    //char *JWT_token = (char*)malloc(1+'.'+strlen(base64_header_claim)+strlen(base64_sign));                                    //Complete JWT Token  
   // char *JWT_token = (char*)malloc(1+'.'+strlen(base64_header_claim)+strlen(result)); 
  //  Serial.print("\nURL STRING ->           ");
@@ -123,7 +122,7 @@ int Send_to_server(const char *private_key, const char *public_key, int sec_to_e
     return 0;
 }
 
-int ECDSA_signature_det(const char *private_key, char* input_buffer, uint8_t* output_buffer)
+int ECDSA_signature_det(const char *private_key, uint8_t* input_buffer, uint8_t* output_buffer) //output ti je na 2 veci u8_t ked mu feedujes string do inputu
   {
     int out_len = 0;
     int keypair = 0;
@@ -143,15 +142,15 @@ int ECDSA_signature_det(const char *private_key, char* input_buffer, uint8_t* ou
      //   Serial.print(input_buffer);
      //   Serial.print("\nPRIVATE KEY -> ");
      //   Serial.print(private_key);
-        pk_cont = mbedtls_pk_parse_key(&pk_ctx,(unsigned char*)private_key,strlen(private_key)+1, NULL, NULL);
+        pk_cont = mbedtls_pk_parse_key(&pk_ctx, (unsigned char*)private_key, strlen(private_key)+1, NULL, NULL);
   //      Serial.print("\nECDSA PRIVATE_KEY PARSE ->");
   //      Serial.print(pk_cont); 
-        keypair = mbedtls_ecdsa_from_keypair(&ecdsa_ctx,mbedtls_pk_ec(pk_ctx));
+        keypair = mbedtls_ecdsa_from_keypair(&ecdsa_ctx, mbedtls_pk_ec(pk_ctx));
   //      Serial.print("\nECDSA KEYPAIR ->");
   //      Serial.print(keypair);
-        int verify = mbedtls_ecdsa_sign_det(&ecdsa_ctx.grp, &r,&s, &ecdsa_ctx.d ,(const unsigned char*)input_buffer, strlen(input_buffer), MBEDTLS_MD_SHA256);  
-        int buffer_1 = mbedtls_mpi_write_binary(&r,(uint8_t*) output_buffer,32);
-        int buffer_2 = mbedtls_mpi_write_binary(&s,(uint8_t*) output_buffer+32,32);
+        int verify = mbedtls_ecdsa_sign_det(&ecdsa_ctx.grp, &r,&s, &ecdsa_ctx.d, input_buffer, sizeof(input_buffer), MBEDTLS_MD_SHA256); //netreba pretypovat u8_t a sizeof, kedze strlen ma rovnaky problem ako char* -> \0 je pre neho koniec stringu  
+        int buffer_1 = mbedtls_mpi_write_binary(&r, output_buffer, mbedtls_mpi_size(&r)); //netreba pretypovat u8_t*
+        int buffer_2 = mbedtls_mpi_write_binary(&s, output_buffer + mbedtls_mpi_size(&s), mbedtls_mpi_size(&s)); //netreba pretypovat u8_t*
   //      Serial.print("\nECDA VERIFY ->");
   //      Serial.print(verify); 
   //      Serial.print("\nECDA BUFFERS ->");
@@ -180,8 +179,8 @@ int ECDSA_signature_det(const char *private_key, char* input_buffer, uint8_t* ou
    return 0; 
   }
 
-int Encrypt_SHA256(const char *input_string,char *output_hash, char *output_hash_hex)
-  {
+int Encrypt_SHA256(uint8_t* input_string, uint8_t* output_hash, char* output_hash_hex) //u8_t* input aj output1
+{
   unsigned char test[32];     
  /*
   mbedtls_md_context_t ctx;
@@ -195,9 +194,13 @@ int Encrypt_SHA256(const char *input_string,char *output_hash, char *output_hash
   */
   Serial.print("\nINPUT FOR SHA256 ->");
   Serial.print(input_string);
-  int len_input = strlen(input_string);
+  int len_input = sizeof(input_string);
   Serial.print("\nINPUT LEN FOR SHA256 ->");
   Serial.print(len_input);
+
+
+  int ret = mbedtls_sha256_ret(input_string, len_input, output_hash, 0);
+  /*
   mbedtls_sha256_context ctx;
   mbedtls_sha256_init(&ctx);
   int start_ret = mbedtls_sha256_starts_ret(&ctx,0);
@@ -223,22 +226,19 @@ int Encrypt_SHA256(const char *input_string,char *output_hash, char *output_hash
      sprintf(output_hash_hex+(i*2), "%02x",output_hash[i]);
   Serial.print("\nHASH SHA256 HEX ->");      //32!!!!!!!!!
   Serial.print(output_hash_hex);
-  mbedtls_sha256_free(&ctx);
+  mbedtls_sha256_free(&ctx);*/
 //  mbedtls_md_free(&ctx);
   if(sha_len == 32)
     return 0;
   else  
     return 1;
-
-
- 
   //zfor(int i= 0; i<((strlen(output_hash)-2)*2); i++)     
   //for(int i= 0; i< (strlen(output_hash)); i++)    
 
 
    
  // mbedtls_md_free(&ctx);
-  }
+}
 
 void LocalTime()
 {
@@ -256,14 +256,14 @@ void LocalTime()
 
 
 
-char *JWT_base_64_url(char* base_str)   
+char *JWT_base_64_url(uint8_t* base_str)   
 {
   int x =0;
   int olen =0;
-  uint8_t *base_unsigned = (uint8_t*)base_str; 
+  //uint8_t *base_unsigned = (uint8_t*)base_str; 
  // Serial.print("\nBASE64 INPUT ->");
  // Serial.print(base_str);
-  String out = base64::encode((uint8_t*)base_unsigned,strlen((const char*)base_unsigned));
+  String out = base64::encode(base_str, sizeof(base_str));
  // Serial.print("\nBASE64 SPOJENY STRING -> ");
  // Serial.print((char*)base_unsigned);
   char *result = (char*)malloc(out.length()+1);
@@ -280,7 +280,7 @@ char *JWT_base_64_url(char* base_str)
     case '=' :  *(result+x) = NULL;
                 break; 
     default : break;
-  }
+    }
   }  
 //   Serial.print("\nBASE64 ->");
 //   Serial.print(result);
